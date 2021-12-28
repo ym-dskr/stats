@@ -1,0 +1,319 @@
+---
+title: "緑本　1-3章"
+output:
+  html_document:
+    theme: cosmo
+    highlight: textmate
+    toc: true
+    toc_float:
+      collapse: false
+    df_print: "tibble"
+    css: site_style.css
+---
+
+# ポアソン分布
+
+## ポアソン分布の性質
+
+性質
+
+- $y\in \left\{ 0,1,2,\ldots \ldots ,\infty \right\}$の値を取り、全ての$y$について和を取ると1になる。
+- 確率分布の平均は$\lambda$である
+- 分散と平均が等しい（$\lambda$)
+
+
+ポアソン分布が選ばれる時、以下のような場合があげられる。
+
+1) データに含まれる値$y_{i}$が$\left\{ 0,1,2,\ldots ,\right\}$といった非負の整数である（カウントデータ）  
+2) $y_{i}$に下限はあるが、上限はわからない  
+3) 平均と分散が大体等しい   
+
+```{r, echo=T, message=F, warning=F, fig.width=8, fig.height=8}
+data <- rpois(n = 100, lambda = 3.56)
+
+# dpois関数は、平均lambdaのポアソン分布の場合、第一引数となる確率を返す関数
+par(mfrow=c(3,3))
+for (i in seq(2,5.2,0.4)){
+    hist(data, labels = F, xlim=c(0,10), ann = F, xaxt="n", yaxt="n", col=rgb(0, 0, 0, alpha=0.1))
+    par(new=T) 
+    plot(0:9, dpois(0:9, lambda = i), type = "b", xlab = paste0("lambda = ", i), xlim=c(0,10), ylim=c(0,0.3))
+}
+```
+
+
+## ポアソン分布の最尤推定
+
+最尤推定は、どんな統計モデルにも適用できる。  
+「当てはまりの良さ」を表す統計量を最大にするようなパラメータの値を探そうとするパラメータ推定方法。  
+
+尤度の実態は、**ある値$\lambda$を定めた時にすべての個体$i$についての$p(y_{i}|\lambda)$の積**のこと。  
+積になる理由は、それぞれの事象が同時に真である確率を計算したいから。イメージとして、その積が大きいほど当てはまりが良いとわかる。
+
+$$
+\begin{align}
+    &\begin{split}
+L\left( \lambda \right) &=p\left( y_{1}| \lambda \right) \times p\left( y_{2}| \lambda \right) \times \ldots \times p\left( y_{i}| \lambda \right) \\ \\
+&=\prod _{i}p\left( y_{i}| \lambda \right) \\
+&=\prod _{i}\dfrac{\lambda ^{y_{i}}\exp \left( -\lambda \right) }{y!}\\
+    \end{split}
+  \end{align}
+$$
+
+
+この尤度関数はそのままだと扱いづらいので、対数変換した対数尤度関数を使うことが多い。
+
+$$\log L\left( \lambda \right) =\sum _{i}\left( y_{i}\log \lambda -\lambda -\sum ^{y_{i}}_{k}\log k\right)$$
+
+対数尤度は尤度の単調増加関数なので、対数尤度が最大になる$\lambda$において尤度も最大になる。
+
+
+```{r, echo=T, message=F, warning=F, fig.width=8, fig.height=5}
+data <- rpois(n = 100, lambda = 3.56)
+
+logL <- function(m){
+    sum(dpois(data, m, log = T))
+}
+
+lambda <- seq(2,5.2,0.4)
+plot(lambda, sapply(lambda, logL), type = "b")
+```
+
+
+
+最尤推定を一般化すると、$\theta$をパラメタとする確率分布から観測データ$y_{i}$が発生した場合、その確率を$p(y|\theta)$とすると、尤度は、  
+
+$$L\left( \theta | Y\right) =\prod _{i}p\left( y_{i}| \theta \right)$$
+
+対数尤度は
+
+$$\log L\left( \theta | Y\right) =\sum _{i}\log p\left( y_{i}| \theta \right)$$
+
+尤度推定はこの対数尤度を最大にするような$\widehat{\theta }$を探し出すこと。
+
+# 最尤推定値のばらつき
+
+乱数で発生させた標本の平均は生成するごとに異なる。  
+試行ごとに最尤推定値(標本平均)$\hat\lambda$が異なるということ。  
+試しにポアソン分布を使った乱数実験を行うと、
+
+
+
+```{r, echo=T, message=F, warning=F, fig.width=8, fig.height=5}
+pois_list <- list()
+
+for (i in 1:3000){
+    pois_list[i] <- mean(rpois(100, 3.5))
+}
+
+hist(unlist(pois_list), breaks = 20)
+```
+
+
+このような推定値のばらつきを標準誤差という。大きさは調査個体数に依存する。  
+標本が大きければ誤差が小さくなるのはイメージしやすい。
+通常、分析を行う際は、真の分布が分からない状態で分析を行う。推定値のばらつきを見る時は、得られた観測データから推定された標本平均$\hat\lambda$から乱数を発生させて見積もることになる。  
+
+
+# 統計モデルの要点：乱数発生・推定・予測
+
+**数字の羅列を見た時に「このデータはどのような確率分布から発生したと考えられるか」と考えることがモデリングの第一歩になる。**  
+仮に、ポアソン分布を例にとった場合、「パラメータ$\lambda$はどんな値？」の問いに答える事が「**推定（または当てはめ）**」
+
+ 統計モデルで重要なのは、もう一つ予測。推定で得られた統計モデルを使って**次のデータ**の分布を見積もることが**予測**。
+
+
+# 確率分布の選び方
+
+データを見た時に考える事。
+
+- 説明したいデータは、離散値か、連続値か？
+- データの範囲は？
+- 標本の分散と平均の関係は？
+
+もしカウントデータだったら、まずは以下の2候補から。
+
+- **ポアソン分布**
+　データが離散値、0以上の範囲、上限なし、平均 $\fallingdotseq$ 分散
+- **二項分布**
+　データが離散値、0以上で有限の範囲、分散が平均の関数
+ 
+ 連続であれば以下から。
+ 
+- **正規分布**
+　データが連続値、範囲が$\left[ -\infty ,+ \infty \right]$、分散と平均が無関係に決まる
+- **ガンマ分布（Γ分布）**
+　データが連続値、範囲が$\left[ -\infty ,+ \infty \right]$、分散は平均の関数
+ 
+ 複雑な分布の場合は、確率分布を混合させることもある。
+
+ 
+# 一般化線形モデル（GLM）
+
+```{r, echo=T, message=F, warning=F, fig.width=8, fig.height=5}
+library(tidyverse)
+
+data <- read.csv("../kubobook_2012/poisson/data3a.csv")
+```
+
+data3はこれから扱う種子数データのサンプルデータ。  
+xが体サイズ、yが種子数、fが施肥処理の因子。
+
+
+
+```{r, echo=T, message=F, warning=F, fig.width=8, fig.height=5}
+data %>% head()
+```
+
+
+
+```{r, echo=T, message=F, warning=F, fig.width=8, fig.height=5}
+data  %>% summary()
+```
+
+
+
+```{r, echo=T, message=F, warning=F, fig.width=8, fig.height=3}
+library(patchwork)
+
+g1 <- ggplot(data) + 
+  geom_point(aes(x = x, y = y, col = f))
+
+g2 <- ggplot(data) + 
+  geom_boxplot(aes(x = f, y = x))
+
+g3 <- ggplot(data) + 
+  geom_boxplot(aes(x = f, y = y))
+
+g1 + g2 + g3
+```
+
+ここでは、ある個体iについて種子数が$y_{i}$である確率$p(y_{i}|\lambda_{i})$はポアソン分布に従っていて、
+
+$$p\left( y_{i}| \lambda _{i}\right) =\dfrac{\lambda_{i}^{y_{i}}\exp \left( -\lambda _{i}\right) }{y_{i}}$$
+
+と仮定する。
+
+
+## 線形予測子と対数リンク関数
+
+$$\lambda _{i}=\exp \left( \beta _{1}+\beta_{2}x_{i}\right) $$
+
+であるとした場合、$\beta _{1}$が切片、$\beta _{2}$が傾きと呼ばれる。  
+このモデルの式は以下に変形できる。
+
+$$\log \lambda _{i}=\beta_{1} +\beta_{2} x_{i}$$
+
+この右辺を線形予測子、右辺をリンク関数という（この場合の右辺は**対数リンク関数**と呼ばれる）。ポアソン回帰におけるGLMでは対数リンク関数が良く使われる。理由は、「推定計算に都合が良く」かつ「わかりやすい」から。  
+推定計算に都合が良いのは、線形予測子>=0の為。（ポアソン分布の平均は非負でなくてはならない条件に都合が良い。）  
+また、わかりやすいのは、要因の効果が積で表されるから。
+
+## 当てはめと当てはまりの良さ
+ポアソン回帰とは、ポアソン分布を使った統計モデルの当てはめで、このモデルの対数尤度$logL$が最大になるパラメータ$\hat\beta_{1}$と$\hat\beta_{2}$の推定値を決める事に等しい。このモデルの対数尤度は
+
+$$\log L\left( \beta_{1},\beta _{2}\right) =\sum _{i}\log \dfrac{\lambda _{i}^{y_{i}}\exp \left( -\lambda _{i}\right) }{y_{i}!}$$
+
+$$\log \lambda _{i}=\beta_{1} +\beta_{2} x_{i}$$
+
+Rでの推定は以下のように行う。
+
+
+```{r, echo=T, message=F, warning=F, fig.width=8, fig.height=5}
+fit <- glm(y ~ x, data = data, family = poisson) # poissonでポアソン分布を指定
+summary(fit) # 詳細表示
+```
+
+
+以上から、$\hat\beta_{1} = 1.29$、$\hat\beta_{2} = 0.0757$とわかる。  
+
+$std.error$はそれぞれの推定値のばらつきを標準偏差で表したもの。「同じ調査方法で同数の別データを取り直してみても、最尤推定値は結構変わるため、そのばらつきを表している」と理解する。
+
+$z~~value$は最尤推定値をSE（std error)で割った値。推定値が0から十分に離れているかどうかの目安（？）
+
+$Pr(>|z|)$は、このglmに限定すれば、平均がz値の絶対値であり、標準偏差が1の正規分布における$-\infty$から0までの値を取る確率の2倍（？）  
+推定値が0に近い事を表現する方法の一つ。
+
+Rでこのモデルの最大対数尤度を評価するには、
+
+```{r, echo=T, message=F, warning=F, fig.width=8, fig.height=5}
+logLik(fit)
+```
+
+対数尤度は-235.4くらいで、自由度が2(パラメータが2個$\hat\beta_{1},\hat\beta_{2}$）であることを表している。
+
+
+## ポアソン回帰による予測
+
+得られた結果で体サイズxにおける平均種子数$\lambda$の予測を行ってみる。
+
+$$\lambda =\exp \left( 1.29+0.0757x\right) $$
+
+
+
+```{r, echo=T, message=F, warning=F, fig.width=8, fig.height=5}
+d <- data
+xx <- seq(min(d$x), max(d$y), length = 100)
+
+plot(d$x, d$y, pch = c(21, 19))# [d$f])
+lines(xx, exp(1.29 + 0.0757 * xx), lwd = 2)
+```
+
+
+
+```{r, echo=T, message=F, warning=F, fig.width=8, fig.height=5}
+# predict関数でも同じ結果となる
+yy <- predict(fit, newdata = data.frame(x = xx), type = "response")
+plot(d$x, d$y, pch = c(21, 19))# [d$f])
+lines(xx, yy, lwd = 2)
+```
+
+
+## 説明変数が因子型の統計モデル
+施肥効果$f_{i}$を説明変数としたモデルも検討してみる。
+施肥効果だけが影響するモデルの平均値を
+
+$$\lambda _{i}=\exp \left( \beta _{1}+\beta _{3}d_{i}\right) $$
+
+施肥効果は$d_{i}$というダミー変数に置き換えられていて、
+
+$$d_{i}=\begin{cases}0~~~~\left( f_{i}=C\right) \\ 1 ~~~~\left( f_{i}=T\right) \end{cases}$$
+
+と表される。
+
+```{r, echo=T, message=F, warning=F, fig.width=8, fig.height=5}
+fit_f <- glm(y ~ f, data = data, family = poisson ) 
+summary(fit_f)
+```
+
+$f$の係数名がfTとなっている。これは説明変数$f_{i}$がT水準で取る値を示している。（CとTの2水準があるが、R内でfactorでCが0, Tが1と置いているため)  
+もし、$f_{i} = C$の時、
+$$\lambda _{i}=\exp \left( 2.05+0\right) =7.77$$
+
+
+$f_{i} = T$の時、
+
+$$\lambda _{i}=\exp \left( 2.05+0.0128\right) = 7.87$$
+
+となる。肥料をやると、ほんの少しだけ種子数は増える・・・？
+
+
+
+```{r, echo=T, message=F, warning=F, fig.width=8, fig.height=5}
+logLik(fit_f)
+```
+
+対数尤度は、$x_{i}$だけのモデルよりも小さく、当てはめは悪くなっていると解釈する。
+
+もし体サイズと施肥効果両方でモデル式を作成すると
+
+```{r, echo=T, message=F, warning=F, fig.width=8, fig.height=5}
+fit_all <- glm(y ~ x + f, data = data, family = poisson)
+fit_all
+```
+
+
+つまり施肥効果がCならば
+$$\lambda _{i}=\exp \left( 1.26+0.08x_{i}\right) $$
+Tならば
+$$ \lambda _{i}=\exp \left( 1.26+0.08x_{i}-0.032\right) $$
+と解釈する。
+
